@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  SUPER_ADMIN  @map("super admin")
+  TENANT_ADMIN @map("admin tenant")
+  CUSTOMERS    @map("customers")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String   @map("nama")
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMERS)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenants             Tenant[]
+  rekomendasiRequests RekomendasiRequest[]
+
+  @@map("users")
+}
+
+model Tenant {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  namaTenant String   @map("nama_tenant")
+  alamat     String
+
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lapangan          Lapangan[]
+  tenantCriteriaValues TenantKriteriaValue[]
+
+  @@map("tenant")
+}
+
+model Lapangan {
+  id           Int    @id @default(autoincrement())
+  tenantId     Int    @map("tenant_id")
+  namaLapangan String @map("nama_lapangan")
+  hargaJam     Decimal @map("harga/jam") @db.Decimal(10, 2)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("lapangan")
+}
+
+model TenantKriteriaValue {
+  id         Int     @id @default(autoincrement())
+  tenantId   Int     @map("tenant_id")
+  kriteriaId Int     @map("kriteria_id")
+  nilai      Decimal @db.Decimal(10, 4)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kriteria Kriteria @relation(fields: [kriteriaId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_kriteria_value")
+}
+
+model Kriteria {
+  id    Int     @id @default(autoincrement())
+  kode  String  @unique
+  nama  String
+  tipe  String
+  bobot Decimal @db.Decimal(10, 2)
+
+  tenantCriteriaValues     TenantKriteriaValue[]
+  kriteriaValues           KriteriaValue[]
+  rekomendasiRequestWeights RekomendasiRequestWeight[]
+
+  @@map("kriteria")
+}
+
+model KriteriaValue {
+  id         Int     @id @default(autoincrement())
+  kriteriaId Int     @map("kriteria_id")
+  value      Decimal @db.Decimal(10, 4)
+
+  kriteria Kriteria @relation(fields: [kriteriaId], references: [id], onDelete: Cascade)
+
+  @@map("kriteria_value")
+}
+
+model RekomendasiRequest {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tempat    String
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user                    User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rekomendasiRequestWeights RekomendasiRequestWeight[]
+
+  @@map("rekomendasi_request")
+}
+
+model RekomendasiRequestWeight {
+  id                   Int     @id @default(autoincrement())
+  rekomendasiRequestId Int     @map("rekomendasi_request_id")
+  kriteriaId           Int     @map("kriteria_id")
+  bobot                Decimal @db.Decimal(10, 2)
+
+  rekomendasiRequest RekomendasiRequest @relation(fields: [rekomendasiRequestId], references: [id], onDelete: Cascade)
+  kriteria           Kriteria           @relation(fields: [kriteriaId], references: [id], onDelete: Cascade)
+
+  @@map("rekomendasi_request_weight")
+}
+
+

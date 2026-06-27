@@ -1,0 +1,9 @@
+1.inisiasi project: npm init -y
+2.install express dan cors : npm install express cors (cors origin resource sharing)
+3.npm install -D typescript @types/node @types/express @types/cors ts-node-dev
+4.buat file tsconfig.json : npx tsc --init
+
+
+hari ke 2
+install dependensi maridb:npm install @prisma/adapter-mariadb
+hapus generated prisma: rm -f-rf
