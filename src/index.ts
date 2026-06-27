@@ -7,6 +7,7 @@ import tenantKriteriaRoute from './routes/tenantKriteriaRoute.js';
 import kriteriaRoute from './routes/kriteriaRoute.js';
 import tenantRoute from './routes/tenantRoute.js';
 import rekomendasiRoute from './routes/rekomendasiRoute.js';
+import spkRoute from './routes/spkRoute.js';
 
 
 const app = express();
@@ -22,6 +23,7 @@ app.use("/tenants", tenantRoute);
 app.use("/lapangan", lapanganRoute);
 app.use("/matriks", tenantKriteriaRoute);
 app.use("/rekomendasi", rekomendasiRoute);
+app.use("/spk", spkRoute);
 
 app.get('/', (req, res) => {
   res.send('Database Berhasil Terhubung!');
