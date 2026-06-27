@@ -20,7 +20,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
         // 2. Ambil data matriks keputusan (Alternatif Tenant)
         const tenants = await prisma.tenant.findMany({
             include: {
-                tenantKriteriaValues: {
+                tenantCriteriaValues: {
                     include: { kriteria: true }
                 }
             }
@@ -33,7 +33,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
         // Susun data ke bentuk matriks objek agar mudah diolah
         const matriksMentah = tenants.map(t => {
             const skor: any = {};
-            t.tenantKriteriaValues.forEach(v => {
+            t.tenantCriteriaValues.forEach(v => {
                 skor[v.kriteria.kode] = Number(v.nilai);
             });
             return {
