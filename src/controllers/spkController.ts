@@ -2,22 +2,32 @@ import { Response, Request } from 'express';
 import { prisma } from '../lib/db.js';
 
 export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
-    const { weights } = req.body; 
-    // Format weights dari frontend: { "C1": 0.4, "C2": 0.3, "C3": 0.3 }
+    const { weights: weightsRaw } = req.body; 
     
-    if (!weights) {
-        return res.status(400).json({ error: 'Bobot kriteria (weights) harus dikirim' });
+    // Validasi input awal
+    if (!weightsRaw || !Array.isArray(weightsRaw)) {
+        return res.status(400).json({ error: 'Bobot kriteria (weights) harus dikirim dalam bentuk array objek' });
     }
 
     try {
-        // 1. Ambil data kriteria untuk tahu tipe (BENEFIT atau COST)
+        // 1. Ambil data kriteria untuk tahu tipe (BENEFIT atau COST) dan kodenya
         const daftarKriteria = await prisma.kriteria.findMany();
+        
         const kriteriaMeta = daftarKriteria.reduce((acc: any, k) => {
             acc[k.kode] = k.tipe.toUpperCase(); // 'BENEFIT' atau 'COST'
             return acc;
         }, {});
 
-        // 2. Ambil data matriks keputusan (Alternatif Tenant)
+        // Transformasi array weights dari Postman menjadi objek Map kriteria kode:
+        // Dari: [{ kriteriaId: 1, bobot: 35 }, { kriteriaId: 2, bobot: 25 }]
+        // Menjadi: { "C1": 35, "C2": 25, "C3": 15, ... }
+        const weights = daftarKriteria.reduce((acc: any, k) => {
+            const match = weightsRaw.find((w: any) => Number(w.kriteriaId) === k.id);
+            acc[k.kode] = match ? Number(match.bobot) : 0;
+            return acc;
+        }, {});
+
+        // 2. Ambil data matriks keputusan (Alternatif Tenant beserta nilainya)
         const tenants = await prisma.tenant.findMany({
             include: {
                 tenantCriteriaValues: {
@@ -30,7 +40,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Data tenant/matriks masih kosong' });
         }
 
-        // Susun data ke bentuk matriks objek agar mudah diolah
+        // Susun data ke bentuk matriks objek agar mudah diolah rumusan matematika
         const matriksMentah = tenants.map(t => {
             const skor: any = {};
             t.tenantCriteriaValues.forEach(v => {
@@ -45,7 +55,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
 
         const kriteriaKodes = daftarKriteria.map(k => k.kode);
 
-        // Cari nilai Max dan Min untuk setiap kriteria (berguna untuk SAW & TOPSIS)
+        // Cari nilai Max dan Min untuk setiap kriteria (berguna untuk normalisasi SAW & ideal TOPSIS)
         const nilaiEkstrem: any = {};
         kriteriaKodes.forEach(kode => {
             const semuaNilai = matriksMentah.map(m => m.skor[kode] || 0);
@@ -56,7 +66,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
         });
 
         // ==========================================
-        // PROSES 1: METODE SAW
+        // PROSES 1: METODE SAW (Simple Additive Weighting)
         // ==========================================
         const hasilSaw = matriksMentah.map(m => {
             let totalSkor = 0;
@@ -68,7 +78,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
                 if (kriteriaMeta[kode] === 'BENEFIT') {
                     normalisasi = nilai / nilaiEkstrem[kode].max;
                 } else {
-                    normalisasi = nilaiEkstrem[kode].min / nilai;
+                    normalisasi = nilaiEkstrem[kode].min / (nilai || 0.001);
                 }
                 totalSkor += normalisasi * bobot;
             });
@@ -86,7 +96,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
                 
                 // Benefit pangkat positif, Cost pangkat negatif
                 const pangkat = kriteriaMeta[kode] === 'BENEFIT' ? bobot : -bobot;
-                vektorS *= Math.pow(nilai, pangkat);
+                vektorS *= Math.pow(nilai || 0.001, pangkat);
             });
             return { tenantId: m.tenantId, namaTenant: m.namaTenant, vektorS };
         });
@@ -152,7 +162,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
             };
         }).sort((a, b) => b.skor - a.skor);
 
-        // Return hasil komparasi ketiga metode sekaligus ke frontend
+        // Kembalikan komparasi ketiga metode sekaligus ke Postman / Frontend
         return res.status(200).json({
             SAW: hasilSaw,
             WP: hasilWp,
@@ -160,7 +170,7 @@ export const hitungMultiMetodeSPK = async (req: Request, res: Response) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Detail Error Perhitungan SPK:", error);
         return res.status(500).json({ error: 'Gagal memproses perhitungan SPK' });
     }
 };

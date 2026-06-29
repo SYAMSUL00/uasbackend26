@@ -19,7 +19,7 @@ app.use(express.json());
 app.use("/users", eventUsers);
 app.use("/auth", authRoute);
 app.use("/kriteria", kriteriaRoute);
-app.use("/tenants", tenantRoute);
+app.use("/tenant", tenantRoute);
 app.use("/lapangan", lapanganRoute);
 app.use("/matriks", tenantKriteriaRoute);
 app.use("/rekomendasi", rekomendasiRoute);
