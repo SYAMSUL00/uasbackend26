@@ -3,8 +3,12 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/db.js';
 
+/**
+ * 📝 REGISTER USER
+ */
 export const registerUser = async (req: Request, res: Response) => {
-    const { name, email, password, role } = req.body;
+    // 🛠️ Disesuaikan: menggunakan 'nama' sesuai skema prisma baru
+    const { nama, email, password, role } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password harus diisi' });
@@ -23,7 +27,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
         const newUser = await prisma.user.create({
             data: {
-                name: name || '',
+                name: nama || '', // 🛠️ Disesuaikan ke kolom 'nama'
                 email,
                 password: hashedPassword,
                 role: role || 'CUSTOMERS'
@@ -44,6 +48,9 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * 🔑 LOGIN USER
+ */
 export const loginUser = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
@@ -67,7 +74,11 @@ export const loginUser = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign(
-            { userId: user.id, username: user.email },
+            { 
+                userId: user.id,
+                username: user.email,
+                role: user.role
+            },
             process.env.JWT_SECRET || "saya_sangat_rahasia",
             { expiresIn: '1h' }
         );
@@ -87,6 +98,9 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * 🔒 FORGOT PASSWORD
+ */
 export const forgotPassword = async (req: Request, res: Response) => {
     const { email } = req.body;
 

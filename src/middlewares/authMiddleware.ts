@@ -12,7 +12,6 @@ declare global {
 
 /**
  * 1. FUNGSI AUTHENTICATION (Cek Login & Validasi Token)
- * Berfungsi untuk memeriksa apakah request membawa token JWT yang valid di dalam Header.
  */
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
@@ -21,7 +20,6 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
         return res.status(401).json({ message: 'Token tidak ditemukan, silakan login' });
     }
 
-    // Mengambil token setelah kata 'Bearer ' (contoh: "Bearer eyJhbG...")
     const token = authHeader.split(' ')[1]; 
     if (!token) {
         return res.status(401).json({ message: 'Format token salah atau tidak ditemukan' });
@@ -31,10 +29,10 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
         const secret = process.env.JWT_SECRET || "saya_sangat_rahasia";
         const decoded = jwt.verify(token, secret) as any;
         
-        // Menyimpan data hasil decode token (id, email, role) ke dalam object req.user
+        // Menyimpan data hasil decode token (userId, username, role) ke dalam object req.user
         req.user = decoded; 
         
-        next(); // Lolos, lanjut ke middleware berikutnya/controller utama
+        next(); 
     } catch (error) {
         return res.status(401).json({ message: 'Token tidak valid atau sudah kedaluwarsa' });
     }
@@ -42,50 +40,47 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
 
 /**
  * 2. FUNGSI AUTHORIZATION: KHUSUS SUPER ADMIN
- * Mencegah user biasa atau tenant mengakses rute privat Super Admin (ex: kelola kriteria SPK, manajemen user).
  */
 export const superAdminOnly = (req: Request, res: Response, next: NextFunction) => {
-    // Memastikan user sudah melewati authMiddleware terlebih dahulu
     if (!req.user) {
         return res.status(401).json({ message: 'Akses tidak sah, silakan login terlebih dahulu' });
     }
 
-    // Pengecekan nilai role dari token JWT
-    if (req.user.role !== 'SUPER_ADMIN') {
+    // Mendukung format mapping database maupun format Enum Prisma asli
+    if (req.user.role !== 'super admin' && req.user.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ message: 'Akses ditolak! Fitur ini hanya untuk Super Admin.' });
     }
 
-    next(); // Lolos, user adalah SUPER_ADMIN
+    next(); 
 };
 
 /**
  * 3. FUNGSI AUTHORIZATION: KHUSUS TENANT ADMIN (PEMILIK LAPANGAN)
- * Mencegah customer mengakses rute khusus milik lapangan (ex: kelola jam operasional, kelola data lapangan).
  */
 export const tenantAdminOnly = (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Akses tidak sah, silakan login terlebih dahulu' });
     }
 
-    if (req.user.role !== 'TENANT_ADMIN') {
+    // 🛠️ AMAN: Menerima 'admin tenant' (database) maupun 'TENANT_ADMIN' (payload token)
+    if (req.user.role !== 'admin tenant' && req.user.role !== 'TENANT_ADMIN') {
         return res.status(403).json({ message: 'Akses ditolak! Fitur ini hanya untuk Admin Tenant.' });
     }
 
-    next(); // Lolos, user adalah TENANT_ADMIN
+    next(); 
 };
 
 /**
  * 4. FUNGSI AUTHORIZATION: KHUSUS CUSTOMERS (PELANGGAN)
- * Memastikan rute hanya bisa dieksekusi oleh akun pelanggan biasa (ex: buat transaksi booking lapangan).
  */
 export const customersOnly = (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Akses tidak sah, silakan login terlebih dahulu' });
     }
 
-    if (req.user.role !== 'CUSTOMERS') {
+    if (req.user.role !== 'customers' && req.user.role !== 'CUSTOMERS') {
         return res.status(403).json({ message: 'Akses ditolak! Fitur ini khusus untuk Customer.' });
     }
 
-    next(); // Lolos, user adalah CUSTOMERS
+    next(); 
 };
