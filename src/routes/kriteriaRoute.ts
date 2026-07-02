@@ -1,10 +1,14 @@
 import express from 'express';
 import { getAllKriteria, createKriteria } from '../controllers/kriteriaController.js';
+// Ambil middleware pembatas hak akses
+import { authMiddleware, superAdminOnly } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Endpoint untuk Kriteria
-router.get('/', getAllKriteria);   // GET http://localhost:3000/kriteria
-router.post('/', createKriteria); // POST http://localhost:3000/kriteria
+// Siapa saja yang sudah login boleh melihat list kriteria
+router.get('/', authMiddleware, getAllKriteria);
+
+// HANYA Super Admin yang boleh membuat kriteria baru
+router.post('/', authMiddleware, superAdminOnly, createKriteria);
 
 export default router;

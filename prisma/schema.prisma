@@ -50,6 +50,8 @@ model Lapangan {
   tenantId     Int    @map("tenant_id")
   namaLapangan String @map("nama_lapangan")
   hargaJam     Decimal @map("harga/jam") @db.Decimal(10, 2)
+  tempat       String    @default("")
+
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -73,7 +75,6 @@ model Kriteria {
   kode  String  @unique
   nama  String
   tipe  String
-  bobot Decimal @db.Decimal(10, 2)
 
   tenantCriteriaValues     TenantKriteriaValue[]
   kriteriaValues           KriteriaValue[]
